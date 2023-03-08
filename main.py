@@ -5,31 +5,35 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 engine = create_engine('sqlite:///parsed_data.db')
 Base = declarative_base()
 
-df = pd.read_excel('1.xlsx', sheet_name='Лист1')
-df.columns = ['id',
-              'company',
-              'fact_Qliq_data1',
-              'fact_Qliq_data2',
-              'fact_Qoil_data1',
-              'fact_Qoil_data2',
-              'forecast_Qliq_data1',
-              'forecast_Qliq_data2',
-              'forecast_Qoil_data1',
-              'forecast_Qoil_data2']
 
-df_drop = df.drop([0, 1])
+def parse_excel_file(file_path):
+    df = pd.read_excel(file_path, sheet_name='Лист1')
+    df.columns = ['id',
+                  'company',
+                  'fact_Qliq_data1',
+                  'fact_Qliq_data2',
+                  'fact_Qoil_data1',
+                  'fact_Qoil_data2',
+                  'forecast_Qliq_data1',
+                  'forecast_Qliq_data2',
+                  'forecast_Qoil_data1',
+                  'forecast_Qoil_data2']
 
-df_drop['date'] = pd.to_datetime('2023-03-01') + pd.to_timedelta(df_drop['id'] - 1, unit='d')
+    df_drop = df.drop([0, 1])
 
-df_drop['total_fact_Qliq'] = df_drop['fact_Qliq_data1'] + df_drop['fact_Qliq_data2']
-df_drop['total_fact_Qoil'] = df_drop['fact_Qoil_data1'] + df_drop['fact_Qoil_data2']
-df_drop['total_forecast_Qliq'] = df_drop['forecast_Qliq_data1'] + df_drop['forecast_Qliq_data2']
-df_drop['total_forecast_Qoil'] = df_drop['forecast_Qoil_data1'] + df_drop['forecast_Qoil_data2']
+    df_drop['date'] = pd.to_datetime('2023-03-01') + pd.to_timedelta(df_drop['id'] - 1, unit='d')
 
-group_total_fact_Qliq = df_drop.groupby([df_drop['date'].dt.month])['total_fact_Qliq'].mean()
-group_total_fact_Qoil = df_drop.groupby([df_drop['date'].dt.month])['total_fact_Qoil'].mean()
-group_total_forecast_Qliq = df_drop.groupby([df_drop['date'].dt.month])['total_forecast_Qliq'].mean()
-group_total_forecast_Qoil = df_drop.groupby([df_drop['date'].dt.month])['total_forecast_Qoil'].mean()
+    df_drop['total_fact_Qliq'] = df_drop['fact_Qliq_data1'] + df_drop['fact_Qliq_data2']
+    df_drop['total_fact_Qoil'] = df_drop['fact_Qoil_data1'] + df_drop['fact_Qoil_data2']
+    df_drop['total_forecast_Qliq'] = df_drop['forecast_Qliq_data1'] + df_drop['forecast_Qliq_data2']
+    df_drop['total_forecast_Qoil'] = df_drop['forecast_Qoil_data1'] + df_drop['forecast_Qoil_data2']
+
+    df_drop['group_total_fact_Qliq'] = df_drop.groupby([df_drop['date'].dt.month])['total_fact_Qliq'].mean()
+    df_drop['group_total_fact_Qoil'] = df_drop.groupby([df_drop['date'].dt.month])['total_fact_Qoil'].mean()
+    df_drop['group_total_forecast_Qliq'] = df_drop.groupby([df_drop['date'].dt.month])['total_forecast_Qliq'].mean()
+    df_drop['group_total_forecast_Qoil'] = df_drop.groupby([df_drop['date'].dt.month])['total_forecast_Qoil'].mean()
+
+    df_drop.to_sql('parsed_data', engine, if_exists='replace')
 
 
 class Data(Base):
@@ -48,6 +52,10 @@ class Data(Base):
     total_fact_Qoil = Column(Integer())
     total_forecast_Qliq = Column(Integer())
     total_forecast_Qoil = Column(Integer())
+    group_total_fact_Qliq = Column(Integer())
+    group_total_fact_Qoil = Column(Integer())
+    group_total_forecast_Qliq = Column(Integer())
+    group_total_forecast_Qoil = Column(Integer())
 
 
 Base.metadata.create_all(engine)
@@ -55,4 +63,4 @@ Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-df_drop.to_sql('parsed_data', engine, if_exists='replace')
+parse_excel_file('1.xlsx')
